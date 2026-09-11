@@ -331,6 +331,19 @@ else drives injected fakes end to end (see `_FakeAliasTransport` in
 these packages installed still passes the full suite too -- each adapter's `OptionalDependencyError`
 path is tested by patching its guarded import to `None`, not by uninstalling anything.
 
+**`unstructured` is the one exception, and only on Windows**: `all` (`pyproject.toml`) excludes
+`rag-unstructured` there via `sys_platform != 'win32'`. `unstructured` pulls in `python-magic`,
+which needs a real libmagic to sniff file types -- Windows has none, and `python-magic`'s own
+compat shim (`magic/compat.py`) crashes the whole interpreter with a native access violation
+instead of raising a catchable `ImportError` when it can't find one. That crash happens at *import*
+time, so it took down every test in the process, not just `UnstructuredParser`'s own. The standard
+pip-installable Windows workaround, `python-magic-bin`, isn't a real fix: it installs its own
+`magic/__init__.py` at the same path as `python-magic`'s, predates and lacks `compat.py` entirely,
+and hasn't been released since 2017 -- pairing the two risks an install-order-dependent file
+collision, not a working combination. So on Windows, `UnstructuredParser`'s tests exercise the
+already-tested `OptionalDependencyError` fallback path (same mechanism as the "not installed" case
+above), not real parsing -- `unstructured` genuinely isn't installed there, not simulated.
+
 **A separate, real, opt-in integration profile also exists**, marked `pytest.mark.e2e` (excluded
 from `-m "not e2e"`, the flag every documented full-suite command in this file and the root
 `AGENTS.md` already passes -- and silently uncollected by `unittest discover` too, since both
