@@ -135,6 +135,17 @@ exclude = [
 [tool.uv.workspace]
 members = []
 
+[tool.uv]
+constraint-dependencies = [
+    # onnxruntime (pulled in transitively via rag-unstructured's unstructured[pdf]
+    # -> unstructured-inference, for PDF parsing) dropped cp310 wheels starting at
+    # 1.24.1 -- verified against PyPI's actual file listing, not just metadata.
+    # Pin to the last cp310-compatible release so `uv lock`/`uv sync` doesn't pick
+    # a version with no installable wheel for this project's Python 3.10 floor.
+    # python_version >= 3.11 is unaffected and resolves onnxruntime normally.
+    "onnxruntime<1.24; python_version < '3.11'",
+]
+
 [dependency-groups]
 dev = [
     # Pull in every extension's third-party deps so the full test suite runs
